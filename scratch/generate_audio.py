@@ -22,6 +22,9 @@ def normalize_name(name):
 
 def clean_tts_text(text):
     """Format and clean the text for optimal TTS pronunciation."""
+    # Normalize Unicode characters to NFC (precomposed) to prevent TTS spelling out words like "Ấp"
+    text = unicodedata.normalize('NFC', text)
+    
     # Convert 'ha' abbreviation to full word 'héc-ta'
     text = re.sub(r'\bha\b', 'héc-ta', text)
     
@@ -109,12 +112,11 @@ async def main():
             normalized = normalize_name(raw_name)
             code = name_to_code.get(normalized)
             if code:
-                # Add friendly introduction greeting to the text
                 if raw_detail:
                     raw_detail = raw_detail[0].upper() + raw_detail[1:]
                 
-                greeting = f"Chào mừng bạn đến với {raw_name}, xã {commune_name}, huyện Trà Cú, tỉnh {province_name}. "
-                full_text = greeting + raw_detail
+                # Exclude welcome greeting, use name and detail directly, NFC normalized
+                full_text = f"{raw_name}. {raw_detail}"
                 cleaned_text = clean_tts_text(full_text)
                 
                 hamlet_texts[code] = {
@@ -129,7 +131,7 @@ async def main():
     intro_text = f"Chào mừng quý vị đại biểu đến với Bản đồ số tương tác xã {commune_name}, tỉnh {province_name}. Đây là sản phẩm công nghệ số do {company_name} thực hiện vào tháng {month} năm {year}. Hệ thống dữ liệu này sẽ được cập nhật liên tục nhằm nâng cao hiệu quả cho công tác quản lý hành chính tại địa phương. Xin trân trọng cảm ơn."
     hamlet_texts["intro"] = {
         "name": "Giới thiệu chung",
-        "text": intro_text,
+        "text": clean_tts_text(intro_text),
         "path": "audio/intro.mp3"
     }
     
