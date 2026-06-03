@@ -84,25 +84,6 @@ def calculate_geojson_center(data):
         return None
     return [total_lat / count, total_lng / count]
 
-def calculate_polygon_center(geometry):
-    coords = geometry.get("coordinates", [])
-    flat_coords = flatten_coordinates(coords)
-    if not flat_coords:
-        return None
-    total_lat = sum(pt[1] for pt in flat_coords)
-    total_lng = sum(pt[0] for pt in flat_coords)
-    return [total_lat / len(flat_coords), total_lng / len(flat_coords)]
-
-LABEL_CENTERS_OVERRIDE = {
-    "Ấp Chợ": [9.63419739684008, 106.29823604960113],
-    "Ấp Giồng Giữa": [9.63680170863899, 106.2681510842208],
-    "Ấp Giồng Lớn": [9.64171154969634, 106.28608098702139],
-    "Ấp Giồng Đình": [9.627176532063325, 106.31626077313578],
-    "Ấp Mé Láng": [9.620268720601135, 106.30797072484404],
-    "Ấp Trà Kha": [9.64119879753422, 106.3092589597584],
-    "Ấp Định An": [9.617158359506787, 106.26841658125296]
-}
-
 def main():
     print("=== STARTING DATA SYNCHRONIZATION ===")
     
@@ -175,10 +156,10 @@ def main():
         total_pop += pop
         total_households += households
         
-        # Calculate center, check overrides first
-        if name in LABEL_CENTERS_OVERRIDE:
-            center = LABEL_CENTERS_OVERRIDE[name]
-            print(f"  Using manual center override for {name}: {center}")
+        # Calculate centroid center (use properties override if available)
+        center = props.get("center") or props.get("label_center")
+        if center:
+            print(f"  Using custom center override for {name}: {center}")
         else:
             center = calculate_geojson_center(data)
             
@@ -186,9 +167,9 @@ def main():
             # Fallback to general center if centroid calculation failed
             center = [9.914, 106.08]
             print(f"  Warning: Could not calculate center for {name}, using default center.")
-        else:
-            all_latitudes.append(center[0])
-            all_longitudes.append(center[1])
+        
+        all_latitudes.append(center[0])
+        all_longitudes.append(center[1])
             
         # Select color from palette
         color = PALETTE[idx % len(PALETTE)]

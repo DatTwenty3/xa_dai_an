@@ -24,6 +24,10 @@
           "Ấp Giồng Giữa",
           "Ấp Bến Tranh",
           "Ấp Vàm Bến Tranh"
+        ],
+        "center": [
+          9.636500923425091,
+          106.2647141902385
         ]
       },
       "geometry": {

@@ -3,58 +3,43 @@ import os
 import json
 import edge_tts
 import sys
+import unicodedata
+import re
 
 # Reconfigure stdout to use utf-8 to avoid console encoding errors on Windows
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-VOICE = "vi-VN-HoaiMyNeural"
-TTS_RATE = "+15%"
+def normalize_name(name):
+    """Normalize names to match across text file and json config."""
+    name = unicodedata.normalize('NFC', name).lower().strip()
+    # Remove common prefixes
+    if name.startswith("ấp "):
+        name = name[3:].strip()
+    elif name.startswith("ấp "):
+        name = name[4:].strip()
+    return name
 
-# Hamlet narrations mapping to codes
-NARRATIONS = {
-    "intro": {
-        "text": "Chào mừng quý vị đại biểu đến với Bản đồ số tương tác xã Đại An, tỉnh Trà Vinh. Đây là sản phẩm công nghệ số do CÔNG TY ÂU LẠC thực hiện vào tháng 6 năm 2026. Hệ thống dữ liệu này sẽ được cập nhật liên tục nhằm nâng cao hiệu quả cho công tác quản lý hành chính tại địa phương. Xin trân trọng cảm ơn.",
-        "path": "audio/intro.mp3"
-    },
-    "3006001": {
-        "text": "Chào mừng bạn đến với Ấp Chợ, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Chợ mới dự kiến được sáp nhập từ ấp Chợ, ấp Mé Rạch E và một phần ấp Giồng Đình. Sau khi ổn định sáp nhập, ấp Chợ mới có tổng diện tích tự nhiên là 144,5 héc-ta, quy mô dân số đạt 3.136 người với 705 hộ dân.",
-        "path": "audio/3006001.mp3"
-    },
-    "3006002": {
-        "text": "Chào mừng bạn đến với Ấp Trà Kha, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Trà Kha mới dự kiến được sáp nhập từ ấp Cây Da và ấp Trà Kha. Sau khi ổn định sáp nhập, ấp Trà Kha mới có tổng diện tích tự nhiên là 328,53 héc-ta, quy mô dân số đạt 3.087 người với 704 hộ dân.",
-        "path": "audio/3006002.mp3"
-    },
-    "3006003": {
-        "text": "Chào mừng bạn đến với Ấp Giồng Đình, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Giồng Đình mới dự kiến được sáp nhập từ ấp Giồng Đình và ấp Xà Lôn. Sau khi ổn định sáp nhập, ấp Giồng Đình mới có tổng diện tích tự nhiên là 372,35 héc-ta, quy mô dân số đạt 3.197 người với 725 hộ dân.",
-        "path": "audio/3006003.mp3"
-    },
-    "3006004": {
-        "text": "Chào mừng bạn đến với Ấp Giồng Giữa, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Giồng Giữa mới dự kiến được sáp nhập từ ấp Mé Rạch B, ấp Giồng Giữa và một phần của ấp Bến Tranh và Vàm Bến Tranh. Sau khi ổn định sáp nhập, ấp Giồng Giữa mới có tổng diện tích tự nhiên là 902,74 héc-ta, quy mô dân số đạt 2.716 người với 705 hộ dân.",
-        "path": "audio/3006004.mp3"
-    },
-    "3006005": {
-        "text": "Chào mừng bạn đến với Ấp Mé Láng, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Mé Láng mới dự kiến được sáp nhập từ ấp Mé Láng, ấp Làng Cá và ấp Bến Chùa. Sau khi ổn định sáp nhập, ấp Mé Láng mới có tổng diện tích tự nhiên là 359,47 héc-ta, quy mô dân số đạt 3.525 người với 816 hộ dân.",
-        "path": "audio/3006005.mp3"
-    },
-    "3006006": {
-        "text": "Chào mừng bạn đến với Ấp Định An, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Định An mới dự kiến được sáp nhập từ ấp Định An, ấp Cá Lóc, ấp Bến Tranh và ấp Vàm Bến Tranh. Sau khi ổn định sáp nhập, ấp Định An mới có tổng diện tích tự nhiên là 751,92 héc-ta, quy mô dân số đạt 3.611 người với 745 hộ dân.",
-        "path": "audio/3006006.mp3"
-    },
-    "3006007": {
-        "text": "Chào mừng bạn đến với Ấp Giồng Lớn, xã Đại An, huyện Trà Cú, tỉnh Trà Vinh. Ấp Giồng Lớn mới dự kiến được sáp nhập từ ấp Giồng Lớn A và ấp Giồng Lớn B. Sau khi ổn định sáp nhập, ấp Giồng Lớn mới có tổng diện tích tự nhiên là 552,19 héc-ta, quy mô dân số đạt 3.764 người với 861 hộ dân.",
-        "path": "audio/3006007.mp3"
-    }
-}
+def clean_tts_text(text):
+    """Format and clean the text for optimal TTS pronunciation."""
+    # Convert 'ha' abbreviation to full word 'héc-ta'
+    text = re.sub(r'\bha\b', 'héc-ta', text)
+    
+    # Replace parentheses with natural phrasing
+    # Example: (64 hộ) -> , với 64 hộ,
+    text = re.sub(r'\(([^)]+)\)', r', với \1,', text)
+    
+    # Clean up double punctuations and spaces
+    text = text.replace(",.", ".").replace(", .", ".").replace("..", ".").replace(" ,", ",").replace("  ", " ")
+    return text.strip()
 
-async def generate_file(key, info):
-    text = info["text"]
-    path = info["path"]
+async def generate_file(key, text, voice, rate, path):
     print(f"Generating TTS for {key} -> {path}...")
+    print(f"  Text: \"{text}\"")
     
     for attempt in range(1, 6):
         try:
-            communicate = edge_tts.Communicate(text, VOICE, rate=TTS_RATE)
+            communicate = edge_tts.Communicate(text, voice, rate=rate)
             await communicate.save(path)
             if os.path.exists(path) and os.path.getsize(path) > 1000:
                 print(f"  [SUCCESS] Saved {path} ({os.path.getsize(path)} bytes)")
@@ -67,15 +52,95 @@ async def generate_file(key, info):
 
 async def main():
     os.makedirs("audio", exist_ok=True)
-    print("=== STARTING NARRATION TTS GENERATION ===")
+    print("=== STARTING DYNAMIC NARRATION TTS GENERATION ===")
     
+    # 1. Load commune config
+    config_path = "commune-config.json"
+    if not os.path.exists(config_path):
+        print(f"Error: {config_path} not found!")
+        sys.exit(1)
+        
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+        
+    commune_name = config.get("commune_name", "Đại An")
+    province_name = config.get("province_name", "Trà Vinh")
+    year = config.get("year", "2026")
+    month = config.get("month", "6")
+    company_name = config.get("company_name", "CÔNG TY ÂU LẠC")
+    voice = config.get("voice", "vi-VN-HoaiMyNeural")
+    tts_rate = config.get("tts_rate", "+15%")
+    
+    # 2. Load compiled config for hamlet code mappings
+    compiled_config_path = "map data/compiled-config.json"
+    if not os.path.exists(compiled_config_path):
+        print(f"Error: {compiled_config_path} not found! Please run sync_data.py first.")
+        sys.exit(1)
+        
+    with open(compiled_config_path, "r", encoding="utf-8") as f:
+        compiled_config = json.load(f)
+        
+    hamlets = compiled_config.get("hamlets", [])
+    name_to_code = {}
+    for h in hamlets:
+        h_name = h.get("name", "")
+        h_code = h.get("ma", "")
+        if h_name and h_code:
+            name_to_code[normalize_name(h_name)] = h_code
+            
+    print(f"Loaded {len(name_to_code)} hamlet mappings from config.")
+    
+    # 3. Read and parse thong_tin_sap_nhap.txt
+    txt_path = "thong_tin_sap_nhap.txt"
+    if not os.path.exists(txt_path):
+        print(f"Error: {txt_path} not found!")
+        sys.exit(1)
+        
+    hamlet_texts = {}
+    with open(txt_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or ":" not in line:
+                continue
+            parts = line.split(":", 1)
+            raw_name = parts[0].strip()
+            raw_detail = parts[1].strip()
+            
+            normalized = normalize_name(raw_name)
+            code = name_to_code.get(normalized)
+            if code:
+                # Add friendly introduction greeting to the text
+                if raw_detail:
+                    raw_detail = raw_detail[0].upper() + raw_detail[1:]
+                
+                greeting = f"Chào mừng bạn đến với {raw_name}, xã {commune_name}, huyện Trà Cú, tỉnh {province_name}. "
+                full_text = greeting + raw_detail
+                cleaned_text = clean_tts_text(full_text)
+                
+                hamlet_texts[code] = {
+                    "name": raw_name,
+                    "text": cleaned_text,
+                    "path": f"audio/{code}.mp3"
+                }
+            else:
+                print(f"Warning: Could not match hamlet name '{raw_name}' (normalized: '{normalized}') to any code.")
+                
+    # 4. Add intro narration
+    intro_text = f"Chào mừng quý vị đại biểu đến với Bản đồ số tương tác xã {commune_name}, tỉnh {province_name}. Đây là sản phẩm công nghệ số do {company_name} thực hiện vào tháng {month} năm {year}. Hệ thống dữ liệu này sẽ được cập nhật liên tục nhằm nâng cao hiệu quả cho công tác quản lý hành chính tại địa phương. Xin trân trọng cảm ơn."
+    hamlet_texts["intro"] = {
+        "name": "Giới thiệu chung",
+        "text": intro_text,
+        "path": "audio/intro.mp3"
+    }
+    
+    # 5. Generate audio files
     tasks = []
-    for key, info in NARRATIONS.items():
-        tasks.append(generate_file(key, info))
+    for key, info in hamlet_texts.items():
+        tasks.append(generate_file(key, info["text"], voice, tts_rate, info["path"]))
         
     results = await asyncio.gather(*tasks)
     success_count = sum(1 for r in results if r)
-    print(f"\n=== TTS GENERATION COMPLETED: {success_count}/{len(NARRATIONS)} succeeded ===")
+    print(f"\n=== TTS GENERATION COMPLETED: {success_count}/{len(hamlet_texts)} succeeded ===")
 
 if __name__ == "__main__":
     asyncio.run(main())
