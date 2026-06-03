@@ -2269,6 +2269,7 @@ path.leaflet-interactive:focus {
 
 /* Animated glowing line connecting old and new hamlets */
 .connecting-glowing-line {
+  display: none !important; /* Tạm ẩn đường nối nhãn cũ - mới */
   stroke-dasharray: 8, 6;
   animation: flowDash 1.0s infinite linear;
   filter: drop-shadow(0 0 3px #ffffff) 
