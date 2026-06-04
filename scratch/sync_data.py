@@ -84,6 +84,21 @@ def calculate_geojson_center(data):
         return None
     return [total_lat / count, total_lng / count]
 
+def calculate_polygon_center(geometry):
+    """Calculates the geometric centroid of a geometry object."""
+    coords = geometry.get("coordinates", [])
+    flat_coords = flatten_coordinates(coords)
+    total_lat = 0.0
+    total_lng = 0.0
+    count = 0
+    for lng, lat in flat_coords:
+        total_lat += lat
+        total_lng += lng
+        count += 1
+    if count == 0:
+        return None
+    return [total_lat / count, total_lng / count]
+
 def main():
     print("=== STARTING DATA SYNCHRONIZATION ===")
     
